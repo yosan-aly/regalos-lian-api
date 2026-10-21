@@ -1,0 +1,29 @@
+### Peticiones de ejemplo (extensión REST Client de VS Code)
+@baseUrl = http://localhost:7070
+@adminToken = dev-admin-token
+
+### Salud
+GET {{baseUrl}}/health
+
+### Catálogo con disponibilidad
+GET {{baseUrl}}/api/v1/catalog
+
+### Reservar un regalo
+POST {{baseUrl}}/api/v1/gifts/bodies-3-6/reservations
+Content-Type: application/json
+
+{
+  "quantity": 2
+}
+
+### Admin: reservas activas
+GET {{baseUrl}}/api/v1/admin/reservations
+X-Admin-Token: {{adminToken}}
+
+### Admin: incluir canceladas
+GET {{baseUrl}}/api/v1/admin/reservations?includeCancelled=true
+X-Admin-Token: {{adminToken}}
+
+### Admin: cancelar una reserva (reemplaza el id)
+DELETE {{baseUrl}}/api/v1/admin/reservations/00000000-0000-0000-0000-000000000000
+X-Admin-Token: {{adminToken}}

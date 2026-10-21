@@ -1,0 +1,19 @@
+# Variables de entorno
+.dev.env
+.env
+
+# Control de versiones
+.git
+.gitignore
+
+# Documentación y archivos locales
+Makefile
+README.md
+requests.http
+cloudbuild.yaml
+.idea
+.vscode
+
+# Artefactos locales
+bin/
+coverage*

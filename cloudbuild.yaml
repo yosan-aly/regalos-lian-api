@@ -1,0 +1,45 @@
+steps:
+  - id: Build
+    name: gcr.io/cloud-builders/docker
+    env: ["DOCKER_BUILDKIT=1"]
+    args: ["build", "--tag=${_IMAGE}:${_TAG}", "."]
+
+  - id: Push
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "${_IMAGE}:${_TAG}"]
+
+  - id: Deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_IMAGE}:${_TAG}
+      - --region=${_REGION}
+      - --service-account=${_RUN_SA}
+      # Público: lo consume el navegador de los invitados
+      - --allow-unauthenticated
+      - --port=8080
+      - --cpu=1
+      - --memory=256Mi
+      - --min-instances=0
+      - --max-instances=2
+      - --set-env-vars=${_ENV_VARS}
+      - --set-secrets=${_SECRETS}
+
+serviceAccount: projects/${PROJECT_ID}/serviceAccounts/pulltask-build@${PROJECT_ID}.iam.gserviceaccount.com
+
+substitutions:
+  _REGION: us-east1
+  _SERVICE: regalos-lian-api
+  _IMAGE: us-east1-docker.pkg.dev/${PROJECT_ID}/pulltask/regalos-lian-api
+  _TAG: manual
+  _RUN_SA: regalos-lian-run@${PROJECT_ID}.iam.gserviceaccount.com
+  # ^@^ cambia el separador a "@" porque ALLOWED_ORIGINS lleva comas
+  _ENV_VARS: ^@^DB_ADDR=ep-calm-credit-b7i08sm4.c-13.us-east-1.aws.neon.tech:5432@DB_DATABASE=babyshower@DB_USER=babyshower_app@ALLOWED_ORIGINS=https://regalos-lian.vercel.app
+  _SECRETS: DB_PASSWORD=babyshower-db-password:latest,ADMIN_TOKEN=babyshower-admin-token:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamicSubstitutions: true

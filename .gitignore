@@ -1,0 +1,12 @@
+# Variables locales con secretos
+.env
+
+# Binarios y artefactos
+/bin/
+*.exe
+coverage*.out
+coverage*.html
+
+# IDE
+.idea/
+.vscode/

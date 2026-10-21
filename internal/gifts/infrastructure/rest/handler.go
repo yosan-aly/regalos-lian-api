@@ -1,0 +1,110 @@
+package rest
+
+import (
+	"context"
+	"errors"
+
+	"github.com/gofiber/fiber/v2"
+
+	"github.com/yosan-aly/regalos-lian-api/internal/gifts/domain"
+)
+
+// GiftService es lo que el adaptador HTTP necesita de la capa de aplicación.
+type GiftService interface {
+	Catalog(ctx context.Context) ([]domain.Category, error)
+	Reserve(ctx context.Context, giftID string, quantity int) (domain.Reservation, domain.Gift, error)
+	Reservations(ctx context.Context, includeCancelled bool) ([]domain.Reservation, error)
+	CancelReservation(ctx context.Context, id string) error
+}
+
+type Handler struct {
+	svc GiftService
+}
+
+func NewHandler(svc GiftService) *Handler {
+	return &Handler{svc: svc}
+}
+
+// Catalog godoc: GET /api/v1/catalog
+func (h *Handler) Catalog(c *fiber.Ctx) error {
+	categories, err := h.svc.Catalog(c.UserContext())
+	if err != nil {
+		return err
+	}
+	// La disponibilidad cambia con cada reserva: nada de caché.
+	c.Set(fiber.HeaderCacheControl, "no-store")
+	return c.JSON(toCatalogResponse(categories))
+}
+
+// Reserve godoc: POST /api/v1/gifts/:giftId/reservations
+func (h *Handler) Reserve(c *fiber.Ctx) error {
+	// El cuerpo es opcional: sin cuerpo se reserva 1 unidad.
+	var req reserveRequest
+	if len(c.Body()) > 0 {
+		if err := c.BodyParser(&req); err != nil {
+			return WriteError(c, fiber.StatusBadRequest, "INVALID_BODY", "El cuerpo de la solicitud no es válido.")
+		}
+	}
+	if req.Quantity == 0 {
+		req.Quantity = 1
+	}
+
+	res, gift, err := h.svc.Reserve(c.UserContext(), c.Params("giftId"), req.Quantity)
+	if err != nil {
+		return h.fail(c, err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(reservationResponse{
+		ID:        res.ID,
+		Quantity:  res.Quantity,
+		CreatedAt: res.CreatedAt,
+		Gift:      toGiftDTO(gift),
+	})
+}
+
+// Reservations godoc: GET /api/v1/admin/reservations?includeCancelled=true
+func (h *Handler) Reservations(c *fiber.Ctx) error {
+	list, err := h.svc.Reservations(c.UserContext(), c.QueryBool("includeCancelled"))
+	if err != nil {
+		return err
+	}
+	resp := make([]adminReservationDTO, 0, len(list))
+	for _, r := range list {
+		resp = append(resp, toAdminReservationDTO(r))
+	}
+	c.Set(fiber.HeaderCacheControl, "no-store")
+	return c.JSON(fiber.Map{"reservations": resp})
+}
+
+// CancelReservation godoc: DELETE /api/v1/admin/reservations/:id
+func (h *Handler) CancelReservation(c *fiber.Ctx) error {
+	if err := h.svc.CancelReservation(c.UserContext(), c.Params("id")); err != nil {
+		return h.fail(c, err)
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// fail traduce errores de negocio a respuestas HTTP; el resto sube al
+// ErrorHandler global, que responde 500 y lo registra en el log.
+func (h *Handler) fail(c *fiber.Ctx, err error) error {
+	var de *domain.Error
+	if !errors.As(err, &de) {
+		return err
+	}
+	return WriteError(c, statusFor(de), de.Code, de.Message)
+}
+
+func statusFor(err *domain.Error) int {
+	switch err {
+	case domain.ErrGiftNotFound, domain.ErrReservationNotFound:
+		return fiber.StatusNotFound
+	case domain.ErrNotEnoughAvailable:
+		return fiber.StatusConflict
+	default:
+		return fiber.StatusBadRequest
+	}
+}
+
+// WriteError responde con el formato de error común de la API.
+func WriteError(c *fiber.Ctx, status int, code, message string) error {
+	return c.Status(status).JSON(errorResponse{Error: errorBody{Code: code, Message: message}})
+}
