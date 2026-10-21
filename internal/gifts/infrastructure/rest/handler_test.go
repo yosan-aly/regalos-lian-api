@@ -59,7 +59,7 @@ func TestCatalog_IncludesAvailable(t *testing.T) {
 		t.Fatalf("status = %d, want 200", resp.StatusCode)
 	}
 
-	var body catalogResponse
+	var body CatalogResponse
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestReserve_StatusCodes(t *testing.T) {
 			if tt.wantCode == "" {
 				return
 			}
-			var body errorResponse
+			var body ErrorResponse
 			if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}

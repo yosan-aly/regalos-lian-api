@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -20,16 +21,23 @@ type Config struct {
 	AdminToken string
 	// ReserveRateLimit es el máximo de reservas por minuto por IP.
 	ReserveRateLimit int
-	LogLevel         slog.Level
+	// WithOpenAPI publica Swagger UI en /swagger (solo para desarrollo).
+	WithOpenAPI bool
+	LogLevel    slog.Level
 }
 
 type DB struct {
 	Addr     string
 	Database string
+	// Schema donde viven las tablas del servicio; se crea si no existe.
+	// Permite compartir una base de datos con otros proyectos.
+	Schema   string
 	User     string
 	Password string
 	SSLMode  string
 }
+
+var schemaNamePattern = regexp.MustCompile(`^[a-z_][a-z0-9_]{0,62}$`)
 
 // URL arma la cadena de conexión escapando usuario y contraseña.
 func (d DB) URL() string {
@@ -63,6 +71,7 @@ func Load() (Config, error) {
 		DB: DB{
 			Addr:     required("DB_ADDR"),
 			Database: required("DB_DATABASE"),
+			Schema:   getEnv("DB_SCHEMAS", "public"),
 			User:     required("DB_USER"),
 			Password: required("DB_PASSWORD"),
 			SSLMode:  os.Getenv("DB_SSL_MODE"),
@@ -74,11 +83,19 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("faltan variables de entorno: %s", strings.Join(missing, ", "))
 	}
 
+	if !schemaNamePattern.MatchString(cfg.DB.Schema) {
+		return Config{}, errors.New("DB_SCHEMAS debe ser un solo schema en minúsculas (letras, números y _)")
+	}
+
 	limit, err := strconv.Atoi(getEnv("RESERVE_RATE_LIMIT", "10"))
 	if err != nil || limit < 1 {
 		return Config{}, errors.New("RESERVE_RATE_LIMIT debe ser un entero mayor que 0")
 	}
 	cfg.ReserveRateLimit = limit
+
+	if cfg.WithOpenAPI, err = strconv.ParseBool(getEnv("SERVICE_WITH_OPEN_API", "false")); err != nil {
+		return Config{}, errors.New("SERVICE_WITH_OPEN_API debe ser true o false")
+	}
 
 	if err := cfg.LogLevel.UnmarshalText([]byte(getEnv("LOG_LEVEL", "info"))); err != nil {
 		return Config{}, fmt.Errorf("LOG_LEVEL inválido: %w", err)

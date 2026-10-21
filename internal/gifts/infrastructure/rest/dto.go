@@ -6,59 +6,65 @@ import (
 	"github.com/yosan-aly/regalos-lian-api/internal/gifts/domain"
 )
 
-type catalogResponse struct {
-	Categories []categoryDTO `json:"categories"`
+// CatalogResponse es la lista completa de regalos agrupada por categoría.
+type CatalogResponse struct {
+	Categories []CategoryDTO `json:"categories"`
 }
 
-type categoryDTO struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Gifts       []giftDTO `json:"gifts"`
+type CategoryDTO struct {
+	ID          string    `json:"id" example:"ropita"`
+	Title       string    `json:"title" example:"Ropita y accesorios"`
+	Description string    `json:"description" example:"Prendas por talla, pañales, toallitas y accesorios para vestir a Lian."`
+	Gifts       []GiftDTO `json:"gifts"`
 }
 
-type giftDTO struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Variant     string `json:"variant,omitempty"`
-	Description string `json:"description"`
-	Required    int    `json:"required"`
-	Selected    int    `json:"selected"`
-	Available   int    `json:"available"`
+type GiftDTO struct {
+	ID          string `json:"id" example:"bodies-3-6"`
+	Name        string `json:"name" example:"Bodies de algodón"`
+	Variant     string `json:"variant,omitempty" example:"3–6 meses"`
+	Description string `json:"description" example:"Bodies para uso diario; talla 3–6 meses."`
+	Required    int    `json:"required" example:"6"`
+	Selected    int    `json:"selected" example:"2"`
+	Available   int    `json:"available" example:"4"`
 }
 
-type reserveRequest struct {
-	Quantity int `json:"quantity"`
+// ReserveRequest es opcional: sin cuerpo se reserva 1 unidad.
+type ReserveRequest struct {
+	Quantity int `json:"quantity" example:"1" minimum:"1" maximum:"20"`
 }
 
-type reservationResponse struct {
-	ID        string    `json:"id"`
-	Quantity  int       `json:"quantity"`
-	CreatedAt time.Time `json:"createdAt"`
-	Gift      giftDTO   `json:"gift"`
+type ReservationResponse struct {
+	ID        string    `json:"id" example:"8cf95ed5-1e97-4386-a331-73a1ab7bea9e"`
+	Quantity  int       `json:"quantity" example:"1"`
+	CreatedAt time.Time `json:"createdAt" example:"2026-12-01T15:04:05Z"`
+	Gift      GiftDTO   `json:"gift"`
 }
 
-type adminReservationDTO struct {
-	ID          string     `json:"id"`
-	GiftID      string     `json:"giftId"`
-	GiftName    string     `json:"giftName"`
-	GiftVariant string     `json:"giftVariant,omitempty"`
-	Quantity    int        `json:"quantity"`
-	CreatedAt   time.Time  `json:"createdAt"`
+type AdminReservationsResponse struct {
+	Reservations []AdminReservationDTO `json:"reservations"`
+}
+
+type AdminReservationDTO struct {
+	ID          string     `json:"id" example:"8cf95ed5-1e97-4386-a331-73a1ab7bea9e"`
+	GiftID      string     `json:"giftId" example:"bodies-3-6"`
+	GiftName    string     `json:"giftName" example:"Bodies de algodón"`
+	GiftVariant string     `json:"giftVariant,omitempty" example:"3–6 meses"`
+	Quantity    int        `json:"quantity" example:"2"`
+	CreatedAt   time.Time  `json:"createdAt" example:"2026-12-01T15:04:05Z"`
 	CancelledAt *time.Time `json:"cancelledAt,omitempty"`
 }
 
-type errorResponse struct {
-	Error errorBody `json:"error"`
+type ErrorResponse struct {
+	Error ErrorBody `json:"error"`
 }
 
-type errorBody struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+type ErrorBody struct {
+	Code    string `json:"code" example:"NOT_ENOUGH_AVAILABLE"`
+	Message string `json:"message" example:"Ya no quedan suficientes unidades de este regalo. Actualiza la página para ver la disponibilidad."`
 }
 
-func toGiftDTO(g domain.Gift) giftDTO {
-	return giftDTO{
+func toGiftDTO(g domain.Gift) GiftDTO {
+	return GiftDTO{
 		ID:          g.ID,
 		Name:        g.Name,
 		Variant:     g.Variant,
@@ -69,10 +75,10 @@ func toGiftDTO(g domain.Gift) giftDTO {
 	}
 }
 
-func toCatalogResponse(categories []domain.Category) catalogResponse {
-	resp := catalogResponse{Categories: make([]categoryDTO, 0, len(categories))}
+func toCatalogResponse(categories []domain.Category) CatalogResponse {
+	resp := CatalogResponse{Categories: make([]CategoryDTO, 0, len(categories))}
 	for _, c := range categories {
-		dto := categoryDTO{ID: c.ID, Title: c.Title, Description: c.Description, Gifts: make([]giftDTO, 0, len(c.Gifts))}
+		dto := CategoryDTO{ID: c.ID, Title: c.Title, Description: c.Description, Gifts: make([]GiftDTO, 0, len(c.Gifts))}
 		for _, g := range c.Gifts {
 			dto.Gifts = append(dto.Gifts, toGiftDTO(g))
 		}
@@ -81,8 +87,8 @@ func toCatalogResponse(categories []domain.Category) catalogResponse {
 	return resp
 }
 
-func toAdminReservationDTO(r domain.Reservation) adminReservationDTO {
-	return adminReservationDTO{
+func toAdminReservationDTO(r domain.Reservation) AdminReservationDTO {
+	return AdminReservationDTO{
 		ID:          r.ID,
 		GiftID:      r.GiftID,
 		GiftName:    r.GiftName,

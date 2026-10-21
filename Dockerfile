@@ -13,7 +13,7 @@ COPY . .
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go build -trimpath -ldflags="-s -w" -o /app/main ./cmd/api
+    go build -trimpath -ldflags="-s -w" -o /app/main ./cmd
 
 # ===========================================
 # Final Image
@@ -34,6 +34,7 @@ EXPOSE 8080
 
 ENV APP_NAME=regalos-lian-api
 ENV SERVICE_PORT=8080
+ENV SERVICE_WITH_OPEN_API=false
 ENV DB_SSL_MODE=verify-full
 ENV LOG_LEVEL=info
 

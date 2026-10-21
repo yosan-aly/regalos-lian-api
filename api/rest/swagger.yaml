@@ -1,0 +1,262 @@
+basePath: /api/v1
+definitions:
+  AdminReservationDTO:
+    properties:
+      cancelledAt:
+        type: string
+      createdAt:
+        example: "2026-12-01T15:04:05Z"
+        type: string
+      giftId:
+        example: bodies-3-6
+        type: string
+      giftName:
+        example: Bodies de algodón
+        type: string
+      giftVariant:
+        example: 3–6 meses
+        type: string
+      id:
+        example: 8cf95ed5-1e97-4386-a331-73a1ab7bea9e
+        type: string
+      quantity:
+        example: 2
+        type: integer
+    type: object
+  AdminReservationsResponse:
+    properties:
+      reservations:
+        items:
+          $ref: '#/definitions/AdminReservationDTO'
+        type: array
+    type: object
+  CatalogResponse:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/CategoryDTO'
+        type: array
+    type: object
+  CategoryDTO:
+    properties:
+      description:
+        example: Prendas por talla, pañales, toallitas y accesorios para vestir a
+          Lian.
+        type: string
+      gifts:
+        items:
+          $ref: '#/definitions/GiftDTO'
+        type: array
+      id:
+        example: ropita
+        type: string
+      title:
+        example: Ropita y accesorios
+        type: string
+    type: object
+  ErrorBody:
+    properties:
+      code:
+        example: NOT_ENOUGH_AVAILABLE
+        type: string
+      message:
+        example: Ya no quedan suficientes unidades de este regalo. Actualiza la página
+          para ver la disponibilidad.
+        type: string
+    type: object
+  ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/ErrorBody'
+    type: object
+  GiftDTO:
+    properties:
+      available:
+        example: 4
+        type: integer
+      description:
+        example: Bodies para uso diario; talla 3–6 meses.
+        type: string
+      id:
+        example: bodies-3-6
+        type: string
+      name:
+        example: Bodies de algodón
+        type: string
+      required:
+        example: 6
+        type: integer
+      selected:
+        example: 2
+        type: integer
+      variant:
+        example: 3–6 meses
+        type: string
+    type: object
+  ReservationResponse:
+    properties:
+      createdAt:
+        example: "2026-12-01T15:04:05Z"
+        type: string
+      gift:
+        $ref: '#/definitions/GiftDTO'
+      id:
+        example: 8cf95ed5-1e97-4386-a331-73a1ab7bea9e
+        type: string
+      quantity:
+        example: 1
+        type: integer
+    type: object
+  ReserveRequest:
+    properties:
+      quantity:
+        example: 1
+        maximum: 20
+        minimum: 1
+        type: integer
+    type: object
+host: localhost:7070
+info:
+  contact: {}
+  description: |-
+    Lista de regalos del baby shower de Lian. Los invitados reservan
+    regalos de forma anónima y la disponibilidad se actualiza para todos.
+  title: Regalos de Lian API
+  version: 1.0.0
+paths:
+  /admin/reservations:
+    get:
+      description: Reservas realizadas, de la más reciente a la más antigua.
+      parameters:
+      - description: Incluir reservas canceladas
+        in: query
+        name: includeCancelled
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AdminReservationsResponse'
+        "401":
+          description: UNAUTHORIZED
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - AdminToken: []
+      summary: Listar reservas
+      tags:
+      - Admin
+  /admin/reservations/{id}:
+    delete:
+      description: Marca la reserva como cancelada y devuelve las unidades al regalo.
+      parameters:
+      - description: Id de la reserva (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Reserva cancelada
+        "401":
+          description: UNAUTHORIZED
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: RESERVATION_NOT_FOUND
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - AdminToken: []
+      summary: Cancelar una reserva
+      tags:
+      - Admin
+  /catalog:
+    get:
+      description: Devuelve las categorías con sus regalos y la disponibilidad actual
+        de cada uno.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CatalogResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Catálogo de regalos
+      tags:
+      - Catalog
+  /gifts/{giftId}/reservations:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Reserva unidades de un regalo de forma anónima y atómica.
+        El cuerpo es opcional: sin cuerpo se reserva 1 unidad.
+      parameters:
+      - default: bodies-3-6
+        description: Id del regalo
+        in: path
+        name: giftId
+        required: true
+        type: string
+      - description: Cantidad a reservar (1 a 20)
+        in: body
+        name: Reservation
+        schema:
+          $ref: '#/definitions/ReserveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ReservationResponse'
+        "400":
+          description: INVALID_QUANTITY o INVALID_BODY
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: GIFT_NOT_FOUND
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: 'NOT_ENOUGH_AVAILABLE: otro invitado se adelantó'
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "429":
+          description: TOO_MANY_REQUESTS
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Reservar un regalo
+      tags:
+      - Reservations
+schemes:
+- http
+- https
+securityDefinitions:
+  AdminToken:
+    description: Token de administración (variable ADMIN_TOKEN)
+    in: header
+    name: X-Admin-Token
+    type: apiKey
+swagger: "2.0"

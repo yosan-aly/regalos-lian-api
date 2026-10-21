@@ -10,6 +10,7 @@
 Makefile
 README.md
 requests.http
+scripts/
 cloudbuild.yaml
 .idea
 .vscode

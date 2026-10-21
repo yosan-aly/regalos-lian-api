@@ -17,7 +17,9 @@ anónima: no se piden nombres ni datos de contacto.
 Hexagonal en un solo servicio: el dominio no conoce ni HTTP ni la base de datos.
 
 ```
-cmd/api/main.go                       # Arranque: config → BD → migraciones → HTTP
+api/rest/                             # Especificación OpenAPI generada (swag)
+cmd/main.go                           # Arranque: config → BD → migraciones → HTTP
+scripts/                              # open-api.sh, run.sh, test.sh
 internal/
 ├── gifts/
 │   ├── domain/                       # Entidades, reglas y errores de negocio
@@ -79,26 +81,44 @@ Respuestas de `POST .../reservations`:
 Las rutas de admin requieren el header `X-Admin-Token`. Si `ADMIN_TOKEN` no está
 definido, esas rutas responden 404. Hay ejemplos listos en [`requests.http`](requests.http).
 
+### Swagger y Postman
+
+La especificación OpenAPI está en [`api/rest/swagger.json`](api/rest/swagger.json) y se
+genera a partir de las anotaciones de los handlers:
+
+```bash
+sh scripts/open-api.sh        # tras cambiar endpoints o DTOs
+```
+
+- **Swagger UI:** con `SERVICE_WITH_OPEN_API=true` (activo en `.dev.env`), abre
+  <http://localhost:7070/swagger/index.html>. En producción está desactivado.
+- **Postman:** *Import* → archivo `api/rest/swagger.json` (o la URL
+  `http://localhost:7070/swagger/doc.json`). Crea la colección con todos los endpoints;
+  para los de admin, en la pestaña *Authorization* de la colección pon el valor de
+  `X-Admin-Token` (`dev-admin-token` en local).
+
 ## Desarrollo local
 
 Requisitos: Go 1.25 y PostgreSQL (por defecto en `localhost:5433`).
 
 ```bash
-# 1. Crear las bases (una vez)
+# 1. Crear la base (una vez); los schemas los crea el servicio
 psql -h localhost -p 5433 -U postgres -c "CREATE DATABASE babyshower"
-psql -h localhost -p 5433 -U postgres -c "CREATE DATABASE babyshower_test"
 
 # 2. Ejecutar (lee .dev.env; para sobrescribir valores crea un .env)
-go run ./cmd/api              # http://localhost:7070
+go run ./cmd                  # http://localhost:7070
 
 # 3. Tests
 go test ./...                 # unitarios
-TEST_DATABASE_URL="postgres://postgres:postgres@localhost:5433/babyshower_test?sslmode=disable" \
-  go test -count=1 ./...      # incluye integración contra Postgres
+TEST_DATABASE_URL="postgres://postgres:postgres@localhost:5433/babyshower?sslmode=disable" \
+  go test -count=1 ./...      # integración, en el schema babyshower_test
 ```
 
 Las migraciones (`internal/platform/database/migrations`) se aplican solas al arrancar,
-en orden y una sola vez; un advisory lock evita que dos instancias migren a la vez.
+en orden y una sola vez. Si el schema de `DB_SCHEMAS` no existe, se crea; cada conexión
+trabaja dentro de él (`search_path`). En local, la base `babyshower` tiene el schema
+`babyshower` para desarrollo y `babyshower_test` para los tests de integración. Un advisory lock por schema evita que dos
+instancias migren a la vez.
 
 ## Configuración
 
@@ -106,12 +126,14 @@ en orden y una sola vez; un advisory lock evita que dos instancias migren a la v
 |---|---|---|
 | `DB_ADDR` | sí | `host:puerto` de PostgreSQL |
 | `DB_DATABASE` | sí | Nombre de la base |
+| `DB_SCHEMAS` | no | Schema del servicio; se crea si no existe (por defecto `public`) |
 | `DB_USER` / `DB_PASSWORD` | sí | Credenciales |
 | `DB_SSL_MODE` | no | `verify-full` en producción (Neon) |
 | `ALLOWED_ORIGINS` | sí | Orígenes CORS separados por comas |
 | `ADMIN_TOKEN` | no | Token de las rutas de admin |
 | `RESERVE_RATE_LIMIT` | no | Reservas por minuto por IP (por defecto 10) |
 | `SERVICE_PORT` / `PORT` | no | Puerto HTTP (por defecto 8080) |
+| `SERVICE_WITH_OPEN_API` | no | `true` publica Swagger UI en `/swagger` (por defecto `false`) |
 | `LOG_LEVEL` | no | `debug`, `info`, `warn` o `error` |
 
 ## Despliegue

@@ -1,0 +1,380 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "Lista de regalos del baby shower de Lian. Los invitados reservan\nregalos de forma anónima y la disponibilidad se actualiza para todos.",
+        "title": "Regalos de Lian API",
+        "contact": {},
+        "version": "1.0.0"
+    },
+    "host": "localhost:7070",
+    "basePath": "/api/v1",
+    "paths": {
+        "/admin/reservations": {
+            "get": {
+                "security": [
+                    {
+                        "AdminToken": []
+                    }
+                ],
+                "description": "Reservas realizadas, de la más reciente a la más antigua.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Listar reservas",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Incluir reservas canceladas",
+                        "name": "includeCancelled",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AdminReservationsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "UNAUTHORIZED",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/reservations/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "AdminToken": []
+                    }
+                ],
+                "description": "Marca la reserva como cancelada y devuelve las unidades al regalo.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Cancelar una reserva",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Id de la reserva (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Reserva cancelada"
+                    },
+                    "401": {
+                        "description": "UNAUTHORIZED",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "RESERVATION_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/catalog": {
+            "get": {
+                "description": "Devuelve las categorías con sus regalos y la disponibilidad actual de cada uno.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "summary": "Catálogo de regalos",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/CatalogResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/gifts/{giftId}/reservations": {
+            "post": {
+                "description": "Reserva unidades de un regalo de forma anónima y atómica.\nEl cuerpo es opcional: sin cuerpo se reserva 1 unidad.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "Reservar un regalo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "bodies-3-6",
+                        "description": "Id del regalo",
+                        "name": "giftId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cantidad a reservar (1 a 20)",
+                        "name": "Reservation",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/ReserveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/ReservationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "INVALID_QUANTITY o INVALID_BODY",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "GIFT_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "NOT_ENOUGH_AVAILABLE: otro invitado se adelantó",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "TOO_MANY_REQUESTS",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "AdminReservationDTO": {
+            "type": "object",
+            "properties": {
+                "cancelledAt": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-12-01T15:04:05Z"
+                },
+                "giftId": {
+                    "type": "string",
+                    "example": "bodies-3-6"
+                },
+                "giftName": {
+                    "type": "string",
+                    "example": "Bodies de algodón"
+                },
+                "giftVariant": {
+                    "type": "string",
+                    "example": "3–6 meses"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "8cf95ed5-1e97-4386-a331-73a1ab7bea9e"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "AdminReservationsResponse": {
+            "type": "object",
+            "properties": {
+                "reservations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/AdminReservationDTO"
+                    }
+                }
+            }
+        },
+        "CatalogResponse": {
+            "type": "object",
+            "properties": {
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/CategoryDTO"
+                    }
+                }
+            }
+        },
+        "CategoryDTO": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Prendas por talla, pañales, toallitas y accesorios para vestir a Lian."
+                },
+                "gifts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/GiftDTO"
+                    }
+                },
+                "id": {
+                    "type": "string",
+                    "example": "ropita"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Ropita y accesorios"
+                }
+            }
+        },
+        "ErrorBody": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "NOT_ENOUGH_AVAILABLE"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Ya no quedan suficientes unidades de este regalo. Actualiza la página para ver la disponibilidad."
+                }
+            }
+        },
+        "ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/ErrorBody"
+                }
+            }
+        },
+        "GiftDTO": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Bodies para uso diario; talla 3–6 meses."
+                },
+                "id": {
+                    "type": "string",
+                    "example": "bodies-3-6"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Bodies de algodón"
+                },
+                "required": {
+                    "type": "integer",
+                    "example": 6
+                },
+                "selected": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "variant": {
+                    "type": "string",
+                    "example": "3–6 meses"
+                }
+            }
+        },
+        "ReservationResponse": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-12-01T15:04:05Z"
+                },
+                "gift": {
+                    "$ref": "#/definitions/GiftDTO"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "8cf95ed5-1e97-4386-a331-73a1ab7bea9e"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "ReserveRequest": {
+            "type": "object",
+            "properties": {
+                "quantity": {
+                    "type": "integer",
+                    "maximum": 20,
+                    "minimum": 1,
+                    "example": 1
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "AdminToken": {
+            "description": "Token de administración (variable ADMIN_TOKEN)",
+            "type": "apiKey",
+            "name": "X-Admin-Token",
+            "in": "header"
+        }
+    }
+}

@@ -1,9 +1,12 @@
-TEST_DATABASE_URL ?= postgres://postgres:postgres@localhost:5433/babyshower_test?sslmode=disable
+TEST_DATABASE_URL ?= postgres://postgres:postgres@localhost:5433/babyshower?sslmode=disable
 
-.PHONY: run test test-integration vet build docker-build
+.PHONY: run docs test test-integration vet build docker-build
 
 run:
-	go run ./cmd/api
+	go run ./cmd
+
+docs:
+	sh scripts/open-api.sh
 
 test:
 	go test ./...
@@ -15,7 +18,7 @@ vet:
 	go vet ./...
 
 build:
-	go build -trimpath -ldflags="-s -w" -o bin/regalos-lian-api ./cmd/api
+	go build -trimpath -ldflags="-s -w" -o bin/regalos-lian-api ./cmd
 
 docker-build:
 	docker build -t regalos-lian-api:local .

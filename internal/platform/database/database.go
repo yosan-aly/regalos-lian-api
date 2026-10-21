@@ -21,6 +21,9 @@ func Connect(ctx context.Context, cfg config.DB) (*pgxpool.Pool, error) {
 	poolCfg.MaxConns = 4
 	poolCfg.MinConns = 0
 	poolCfg.MaxConnIdleTime = 5 * time.Minute
+	// Cada conexión trabaja dentro del schema del servicio. Es un parámetro
+	// de arranque de la conexión: requiere el host directo de Neon, no el -pooler.
+	poolCfg.ConnConfig.RuntimeParams["search_path"] = cfg.Schema
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {

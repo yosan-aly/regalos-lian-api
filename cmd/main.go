@@ -19,6 +19,17 @@ import (
 	"github.com/yosan-aly/regalos-lian-api/internal/platform/server"
 )
 
+// @title Regalos de Lian API
+// @version 1.0.0
+// @description Lista de regalos del baby shower de Lian. Los invitados reservan
+// @description regalos de forma anónima y la disponibilidad se actualiza para todos.
+// @host localhost:7070
+// @BasePath /api/v1
+// @schemes http https
+// @securityDefinitions.apikey AdminToken
+// @in header
+// @name X-Admin-Token
+// @description Token de administración (variable ADMIN_TOKEN)
 func main() {
 	if err := run(); err != nil {
 		slog.Error("server stopped", "error", err.Error())
@@ -51,7 +62,7 @@ func run() error {
 	}
 	defer pool.Close()
 
-	if err := database.Migrate(ctx, pool); err != nil {
+	if err := database.Migrate(ctx, pool, cfg.DB.Schema); err != nil {
 		return err
 	}
 

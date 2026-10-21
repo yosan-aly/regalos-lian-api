@@ -37,7 +37,7 @@ substitutions:
   _TAG: manual
   _RUN_SA: regalos-lian-run@${PROJECT_ID}.iam.gserviceaccount.com
   # ^@^ cambia el separador a "@" porque ALLOWED_ORIGINS lleva comas
-  _ENV_VARS: ^@^DB_ADDR=ep-calm-credit-b7i08sm4.c-13.us-east-1.aws.neon.tech:5432@DB_DATABASE=babyshower@DB_USER=babyshower_app@ALLOWED_ORIGINS=https://regalos-lian.vercel.app
+  _ENV_VARS: ^@^DB_ADDR=ep-calm-credit-b7i08sm4.c-13.us-east-1.aws.neon.tech:5432@DB_DATABASE=babyshower@DB_SCHEMAS=babyshower@DB_USER=babyshower_app@ALLOWED_ORIGINS=https://regalos-lian.vercel.app
   _SECRETS: DB_PASSWORD=babyshower-db-password:latest,ADMIN_TOKEN=babyshower-admin-token:latest
 
 options:

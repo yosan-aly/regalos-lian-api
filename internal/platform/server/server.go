@@ -11,7 +11,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/gofiber/swagger"
 
+	_ "github.com/yosan-aly/regalos-lian-api/api/rest" // registra la especificación OpenAPI
 	"github.com/yosan-aly/regalos-lian-api/internal/gifts/infrastructure/rest"
 	"github.com/yosan-aly/regalos-lian-api/internal/platform/config"
 )
@@ -48,6 +50,12 @@ func New(cfg config.Config, svc rest.GiftService, log *slog.Logger) *fiber.App {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok"})
 	})
+
+	if cfg.WithOpenAPI {
+		// La especificación se genera con scripts/open-api.sh en api/rest.
+		app.Get("/swagger/*", swagger.HandlerDefault)
+		log.Info("swagger enabled", "url", "http://localhost:"+cfg.Port+"/swagger/index.html")
+	}
 
 	h := rest.NewHandler(svc)
 	api := app.Group("/api/v1")

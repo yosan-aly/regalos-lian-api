@@ -14,23 +14,38 @@ import (
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
-// migrationLockID identifica el advisory lock que evita que dos
-// instancias de Cloud Run migren al mismo tiempo.
-const migrationLockID = 7_150_412_026
-
-// Migrate aplica en orden los archivos de migrations/ que aún no se han
-// ejecutado. Cada archivo corre en su propia transacción.
-func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
+// Migrate crea el schema si no existe y aplica en orden los archivos de
+// migrations/ que aún no se han ejecutado en él. Cada archivo corre en su
+// propia transacción. Las tablas se crean en el schema porque el pool
+// fija search_path (ver Connect).
+func Migrate(ctx context.Context, pool *pgxpool.Pool, schema string) error {
 	conn, err := pool.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("acquire connection: %w", err)
 	}
 	defer conn.Release()
 
-	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock($1)`, migrationLockID); err != nil {
+	// Advisory lock por schema: evita que dos instancias de Cloud Run
+	// migren el mismo schema al mismo tiempo.
+	lockKey := "regalos-lian-api:" + schema
+	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock(hashtext($1))`, lockKey); err != nil {
 		return fmt.Errorf("acquire migration lock: %w", err)
 	}
-	defer conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1)`, migrationLockID) //nolint:errcheck
+	defer conn.Exec(context.Background(), `SELECT pg_advisory_unlock(hashtext($1))`, lockKey) //nolint:errcheck
+
+	// Se consulta antes de crear: CREATE SCHEMA exige permiso CREATE sobre la
+	// base incluso con IF NOT EXISTS, y un usuario de ejecución puede no tenerlo
+	// si el schema ya fue creado por el administrador.
+	var exists bool
+	if err := conn.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = $1)`, schema).Scan(&exists); err != nil {
+		return fmt.Errorf("check schema: %w", err)
+	}
+	if !exists {
+		if _, err := conn.Exec(ctx, `CREATE SCHEMA `+pgx.Identifier{schema}.Sanitize()); err != nil {
+			return fmt.Errorf("create schema %s: %w", schema, err)
+		}
+		slog.InfoContext(ctx, "schema created", "schema", schema)
+	}
 
 	if _, err := conn.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -73,7 +88,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		if err != nil {
 			return fmt.Errorf("apply migration %s: %w", version, err)
 		}
-		slog.InfoContext(ctx, "migration applied", "version", version)
+		slog.InfoContext(ctx, "migration applied", "schema", schema, "version", version)
 	}
 	return nil
 }
