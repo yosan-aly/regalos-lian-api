@@ -41,7 +41,7 @@ func TestConfirm_NormalizesAndValidates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got.Name != "Ana María" || got.Attendees != 3 {
+	if got.Name != "Sanly Ortiz" || got.Attendees != 3 {
 		t.Fatalf("got %+v", got)
 	}
 

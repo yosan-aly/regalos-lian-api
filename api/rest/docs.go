@@ -493,13 +493,13 @@ const docTemplate = `{
             "properties": {
                 "attendees": {
                     "type": "integer",
-                    "maximum": 10,
+                    "maximum": 4,
                     "minimum": 1,
                     "example": 3
                 },
                 "name": {
                     "type": "string",
-                    "example": "Ana María"
+                    "example": "Sanly Ortiz"
                 }
             }
         },
@@ -508,7 +508,7 @@ const docTemplate = `{
             "properties": {
                 "attendees": {
                     "type": "integer",
-                    "example": 3
+                    "example": 5
                 },
                 "createdAt": {
                     "type": "string",
@@ -520,7 +520,7 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string",
-                    "example": "Ana María"
+                    "example": "Sanly Ortiz"
                 },
                 "updatedAt": {
                     "type": "string",

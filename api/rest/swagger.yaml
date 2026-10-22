@@ -58,17 +58,17 @@ definitions:
     properties:
       attendees:
         example: 3
-        maximum: 10
+        maximum: 4
         minimum: 1
         type: integer
       name:
-        example: Ana María
+        example: Sanly Ortiz
         type: string
     type: object
   ConfirmationResponse:
     properties:
       attendees:
-        example: 3
+        example: 5
         type: integer
       createdAt:
         example: "2026-11-20T15:04:05Z"
@@ -77,7 +77,7 @@ definitions:
         example: 8cf95ed5-1e97-4386-a331-73a1ab7bea9e
         type: string
       name:
-        example: Ana María
+        example: Sanly Ortiz
         type: string
       updatedAt:
         example: "2026-11-21T09:30:00Z"

@@ -14,7 +14,7 @@ func TestParseConfirmationInput(t *testing.T) {
 		wantErr   error
 	}{
 		{name: "valid", guest: "Ana", attendees: 3, want: ConfirmationInput{Name: "Ana", Attendees: 3}},
-		{name: "normalizes spaces", guest: "  Ana   María ", attendees: 1, want: ConfirmationInput{Name: "Ana María", Attendees: 1}},
+		{name: "normalizes spaces", guest: "  Ana   María ", attendees: 1, want: ConfirmationInput{Name: "Sanly Ortiz", Attendees: 1}},
 		{name: "accented name counts runes", guest: "Íñ", attendees: 1, want: ConfirmationInput{Name: "Íñ", Attendees: 1}},
 		{name: "short name", guest: " A ", attendees: 1, wantErr: ErrInvalidName},
 		{name: "long name", guest: strings.Repeat("a", MaxNameLength+1), attendees: 1, wantErr: ErrInvalidName},
