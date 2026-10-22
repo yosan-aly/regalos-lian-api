@@ -54,15 +54,6 @@ type AdminReservationDTO struct {
 	CancelledAt *time.Time `json:"cancelledAt,omitempty"`
 }
 
-type ErrorResponse struct {
-	Error ErrorBody `json:"error"`
-}
-
-type ErrorBody struct {
-	Code    string `json:"code" example:"NOT_ENOUGH_AVAILABLE"`
-	Message string `json:"message" example:"Ya no quedan suficientes unidades de este regalo. Actualiza la página para ver la disponibilidad."`
-}
-
 func toGiftDTO(g domain.Gift) GiftDTO {
 	return GiftDTO{
 		ID:          g.ID,

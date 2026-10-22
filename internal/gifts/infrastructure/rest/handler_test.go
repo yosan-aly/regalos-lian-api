@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/yosan-aly/regalos-lian-api/internal/gifts/domain"
+	"github.com/yosan-aly/regalos-lian-api/internal/platform/httperr"
 )
 
 type stubService struct {
@@ -101,7 +102,7 @@ func TestReserve_StatusCodes(t *testing.T) {
 			if tt.wantCode == "" {
 				return
 			}
-			var body ErrorResponse
+			var body httperr.ErrorResponse
 			if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}

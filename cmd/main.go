@@ -11,8 +11,10 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/yosan-aly/regalos-lian-api/internal/gifts/application"
-	"github.com/yosan-aly/regalos-lian-api/internal/gifts/infrastructure/postgres"
+	attendanceapp "github.com/yosan-aly/regalos-lian-api/internal/attendance/application"
+	attendancepg "github.com/yosan-aly/regalos-lian-api/internal/attendance/infrastructure/postgres"
+	giftsapp "github.com/yosan-aly/regalos-lian-api/internal/gifts/application"
+	giftspg "github.com/yosan-aly/regalos-lian-api/internal/gifts/infrastructure/postgres"
 	"github.com/yosan-aly/regalos-lian-api/internal/platform/config"
 	"github.com/yosan-aly/regalos-lian-api/internal/platform/database"
 	"github.com/yosan-aly/regalos-lian-api/internal/platform/logger"
@@ -66,8 +68,10 @@ func run() error {
 		return err
 	}
 
-	svc := application.NewService(postgres.NewRepository(pool))
-	app := server.New(cfg, svc, log)
+	app := server.New(cfg, server.Services{
+		Gifts:      giftsapp.NewService(giftspg.NewRepository(pool)),
+		Attendance: attendanceapp.NewService(attendancepg.NewRepository(pool)),
+	}, log)
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- app.Listen(":" + cfg.Port) }()

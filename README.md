@@ -5,6 +5,9 @@ desde la página ([regalos-lian](https://github.com/yosan-aly/regalos-lian)) y l
 disponibilidad se actualiza para todos, **sin regalos repetidos**. La selección es
 anónima: no se piden nombres ni datos de contacto.
 
+También registra la **confirmación de asistencia** al evento: nombre y cuántas personas
+asisten en total.
+
 ## Stack
 
 - **Go 1.25** · [Fiber v2](https://gofiber.io) · [pgx v5](https://github.com/jackc/pgx)
@@ -31,9 +34,14 @@ internal/
 │   └── infrastructure/
 │       ├── postgres/                 # Adaptador de salida (pgx)
 │       └── rest/                     # Adaptador de entrada (Fiber): handlers y DTOs
+├── attendance/                       # Confirmación de asistencia (misma estructura)
+│   ├── domain/
+│   ├── application/
+│   └── infrastructure/{postgres,rest}/
 └── platform/
     ├── config/                       # Variables de entorno
-    ├── database/                     # Pool de conexiones y migraciones embebidas
+    ├── database/                     # Pool de conexiones, migraciones embebidas y dbtest
+    ├── httperr/                      # Formato común de errores
     ├── logger/                       # slog → formato Cloud Logging
     └── server/                       # Middlewares, rutas, autenticación de admin
 ```
@@ -67,6 +75,10 @@ Base: `/api/v1`. Los errores siempre tienen la forma
 | POST | `/api/v1/gifts/{giftId}/reservations` | público | Reserva. Body opcional: `{"quantity": 2}` (por defecto 1) |
 | GET | `/api/v1/admin/reservations` | admin | Reservas realizadas (`?includeCancelled=true`) |
 | DELETE | `/api/v1/admin/reservations/{id}` | admin | Cancela la reserva y libera las unidades |
+| POST | `/api/v1/attendance-confirmations` | público | Confirma asistencia. Body: `{"name": "Ana", "attendees": 3}`; devuelve el `id` |
+| PUT | `/api/v1/attendance-confirmations/{id}` | público, con el `id` | Actualiza nombre o asistentes |
+| GET | `/api/v1/admin/attendance-confirmations` | admin | Confirmaciones con `totalConfirmations` y `totalAttendees` |
+| DELETE | `/api/v1/admin/attendance-confirmations/{id}` | admin | Elimina una confirmación (por ejemplo, un duplicado) |
 
 Respuestas de `POST .../reservations`:
 
@@ -131,7 +143,7 @@ instancias migren a la vez.
 | `DB_SSL_MODE` | no | `verify-full` en producción (Neon) |
 | `ALLOWED_ORIGINS` | sí | Orígenes CORS separados por comas |
 | `ADMIN_TOKEN` | no | Token de las rutas de admin |
-| `RESERVE_RATE_LIMIT` | no | Reservas por minuto por IP (por defecto 10) |
+| `RESERVE_RATE_LIMIT` | no | Escrituras públicas (reservas y confirmaciones) por minuto por IP (por defecto 10) |
 | `SERVICE_PORT` / `PORT` | no | Puerto HTTP (por defecto 8080) |
 | `SERVICE_WITH_OPEN_API` | no | `true` publica Swagger UI en `/swagger` (por defecto `false`) |
 | `LOG_LEVEL` | no | `debug`, `info`, `warn` o `error` |

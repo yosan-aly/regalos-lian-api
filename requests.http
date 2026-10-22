@@ -27,3 +27,30 @@ X-Admin-Token: {{adminToken}}
 ### Admin: cancelar una reserva (reemplaza el id)
 DELETE {{baseUrl}}/api/v1/admin/reservations/00000000-0000-0000-0000-000000000000
 X-Admin-Token: {{adminToken}}
+
+### Confirmar asistencia
+# @name confirm
+POST {{baseUrl}}/api/v1/attendance-confirmations
+Content-Type: application/json
+
+{
+  "name": "Sanly Ortiz",
+  "attendees": 3
+}
+
+### Actualizar la confirmación (usa el id de la respuesta anterior)
+PUT {{baseUrl}}/api/v1/attendance-confirmations/{{confirm.response.body.id}}
+Content-Type: application/json
+
+{
+  "name": "Sanly Ortiz",
+  "attendees": 4
+}
+
+### Admin: confirmaciones y total de asistentes
+GET {{baseUrl}}/api/v1/admin/attendance-confirmations
+X-Admin-Token: {{adminToken}}
+
+### Admin: eliminar una confirmación (reemplaza el id)
+DELETE {{baseUrl}}/api/v1/admin/attendance-confirmations/00000000-0000-0000-0000-000000000000
+X-Admin-Token: {{adminToken}}

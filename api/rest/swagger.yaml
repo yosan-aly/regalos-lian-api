@@ -54,6 +54,48 @@ definitions:
         example: Ropita y accesorios
         type: string
     type: object
+  ConfirmationRequest:
+    properties:
+      attendees:
+        example: 3
+        maximum: 10
+        minimum: 1
+        type: integer
+      name:
+        example: Ana María
+        type: string
+    type: object
+  ConfirmationResponse:
+    properties:
+      attendees:
+        example: 3
+        type: integer
+      createdAt:
+        example: "2026-11-20T15:04:05Z"
+        type: string
+      id:
+        example: 8cf95ed5-1e97-4386-a331-73a1ab7bea9e
+        type: string
+      name:
+        example: Ana María
+        type: string
+      updatedAt:
+        example: "2026-11-21T09:30:00Z"
+        type: string
+    type: object
+  ConfirmationSummaryResponse:
+    properties:
+      confirmations:
+        items:
+          $ref: '#/definitions/ConfirmationResponse'
+        type: array
+      totalAttendees:
+        example: 31
+        type: integer
+      totalConfirmations:
+        example: 12
+        type: integer
+    type: object
   ErrorBody:
     properties:
       code:
@@ -124,6 +166,61 @@ info:
   title: Regalos de Lian API
   version: 1.0.0
 paths:
+  /admin/attendance-confirmations:
+    get:
+      description: Confirmaciones de asistencia (de la más reciente a la más antigua)
+        con el total de asistentes.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ConfirmationSummaryResponse'
+        "401":
+          description: UNAUTHORIZED
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - AdminToken: []
+      summary: Listar confirmaciones
+      tags:
+      - Admin
+  /admin/attendance-confirmations/{id}:
+    delete:
+      description: Elimina una confirmación, por ejemplo un duplicado.
+      parameters:
+      - description: Id de la confirmación (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Confirmación eliminada
+        "401":
+          description: UNAUTHORIZED
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: CONFIRMATION_NOT_FOUND
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - AdminToken: []
+      summary: Eliminar una confirmación
+      tags:
+      - Admin
   /admin/reservations:
     get:
       description: Reservas realizadas, de la más reciente a la más antigua.
@@ -183,6 +280,86 @@ paths:
       summary: Cancelar una reserva
       tags:
       - Admin
+  /attendance-confirmations:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Registra que un invitado asistirá y cuántas personas van en total (incluyéndolo).
+        Guarda el id de la respuesta: es el que permite actualizar la confirmación.
+      parameters:
+      - description: Nombre y total de asistentes (1 a 10)
+        in: body
+        name: Confirmation
+        required: true
+        schema:
+          $ref: '#/definitions/ConfirmationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ConfirmationResponse'
+        "400":
+          description: INVALID_NAME, INVALID_ATTENDEES o INVALID_BODY
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "429":
+          description: TOO_MANY_REQUESTS
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Confirmar asistencia
+      tags:
+      - Attendance
+  /attendance-confirmations/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Cambia el nombre o la cantidad de asistentes. Requiere el id que
+        se recibió al confirmar.
+      parameters:
+      - description: Id de la confirmación (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nombre y total de asistentes (1 a 10)
+        in: body
+        name: Confirmation
+        required: true
+        schema:
+          $ref: '#/definitions/ConfirmationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ConfirmationResponse'
+        "400":
+          description: INVALID_NAME, INVALID_ATTENDEES o INVALID_BODY
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: CONFIRMATION_NOT_FOUND
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "429":
+          description: TOO_MANY_REQUESTS
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Actualizar una confirmación
+      tags:
+      - Attendance
   /catalog:
     get:
       description: Devuelve las categorías con sus regalos y la disponibilidad actual

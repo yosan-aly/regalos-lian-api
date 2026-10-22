@@ -19,7 +19,8 @@ type Config struct {
 	AllowedOrigins string
 	// AdminToken protege /api/v1/admin. Si está vacío, esas rutas se desactivan.
 	AdminToken string
-	// ReserveRateLimit es el máximo de reservas por minuto por IP.
+	// ReserveRateLimit es el máximo de escrituras públicas (reservas y
+	// confirmaciones de asistencia) por minuto por IP.
 	ReserveRateLimit int
 	// WithOpenAPI publica Swagger UI en /swagger (solo para desarrollo).
 	WithOpenAPI bool

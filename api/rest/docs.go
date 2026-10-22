@@ -15,6 +15,92 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/attendance-confirmations": {
+            "get": {
+                "security": [
+                    {
+                        "AdminToken": []
+                    }
+                ],
+                "description": "Confirmaciones de asistencia (de la más reciente a la más antigua) con el total de asistentes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Listar confirmaciones",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConfirmationSummaryResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "UNAUTHORIZED",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/attendance-confirmations/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "AdminToken": []
+                    }
+                ],
+                "description": "Elimina una confirmación, por ejemplo un duplicado.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Eliminar una confirmación",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Id de la confirmación (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Confirmación eliminada"
+                    },
+                    "401": {
+                        "description": "UNAUTHORIZED",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "CONFIRMATION_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/reservations": {
             "get": {
                 "security": [
@@ -96,6 +182,123 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "RESERVATION_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance-confirmations": {
+            "post": {
+                "description": "Registra que un invitado asistirá y cuántas personas van en total (incluyéndolo).\nGuarda el id de la respuesta: es el que permite actualizar la confirmación.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Confirmar asistencia",
+                "parameters": [
+                    {
+                        "description": "Nombre y total de asistentes (1 a 10)",
+                        "name": "Confirmation",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ConfirmationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/ConfirmationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "INVALID_NAME, INVALID_ATTENDEES o INVALID_BODY",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "TOO_MANY_REQUESTS",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance-confirmations/{id}": {
+            "put": {
+                "description": "Cambia el nombre o la cantidad de asistentes. Requiere el id que se recibió al confirmar.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Actualizar una confirmación",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Id de la confirmación (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nombre y total de asistentes (1 a 10)",
+                        "name": "Confirmation",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ConfirmationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConfirmationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "INVALID_NAME, INVALID_ATTENDEES o INVALID_BODY",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "CONFIRMATION_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "TOO_MANY_REQUESTS",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
@@ -282,6 +485,65 @@ const docTemplate = `{
                 "title": {
                     "type": "string",
                     "example": "Ropita y accesorios"
+                }
+            }
+        },
+        "ConfirmationRequest": {
+            "type": "object",
+            "properties": {
+                "attendees": {
+                    "type": "integer",
+                    "maximum": 10,
+                    "minimum": 1,
+                    "example": 3
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Ana María"
+                }
+            }
+        },
+        "ConfirmationResponse": {
+            "type": "object",
+            "properties": {
+                "attendees": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-11-20T15:04:05Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "8cf95ed5-1e97-4386-a331-73a1ab7bea9e"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Ana María"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "example": "2026-11-21T09:30:00Z"
+                }
+            }
+        },
+        "ConfirmationSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "confirmations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ConfirmationResponse"
+                    }
+                },
+                "totalAttendees": {
+                    "type": "integer",
+                    "example": 31
+                },
+                "totalConfirmations": {
+                    "type": "integer",
+                    "example": 12
                 }
             }
         },

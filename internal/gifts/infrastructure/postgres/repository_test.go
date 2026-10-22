@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -12,45 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/yosan-aly/regalos-lian-api/internal/gifts/domain"
-	"github.com/yosan-aly/regalos-lian-api/internal/platform/database"
+	"github.com/yosan-aly/regalos-lian-api/internal/platform/database/dbtest"
 )
-
-// Test de integración: requiere una base de datos real. Usa su propio
-// schema (TEST_DB_SCHEMAS, por defecto babyshower_test) para no tocar
-// los datos de desarrollo.
-//
-//	TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5433/babyshower?sslmode=disable go test ./...
-func newTestPool(t *testing.T) *pgxpool.Pool {
-	t.Helper()
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("TEST_DATABASE_URL no está definida; se omite el test de integración")
-	}
-	schema := os.Getenv("TEST_DB_SCHEMAS")
-	if schema == "" {
-		schema = "babyshower_test"
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	cfg, err := pgxpool.ParseConfig(url)
-	if err != nil {
-		t.Fatalf("parse url: %v", err)
-	}
-	cfg.ConnConfig.RuntimeParams["search_path"] = schema
-
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
-	if err != nil {
-		t.Fatalf("connect: %v", err)
-	}
-	t.Cleanup(pool.Close)
-
-	if err := database.Migrate(ctx, pool, schema); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
-	return pool
-}
 
 // createTestGift crea un regalo temporal y lo borra al terminar el test.
 func createTestGift(t *testing.T, pool *pgxpool.Pool, required int) string {
@@ -71,7 +33,7 @@ func createTestGift(t *testing.T, pool *pgxpool.Pool, required int) string {
 }
 
 func TestReserve_ConcurrentGuestsNeverOverbook(t *testing.T) {
-	pool := newTestPool(t)
+	pool := dbtest.NewPool(t)
 	repo := NewRepository(pool)
 	giftID := createTestGift(t, pool, 3)
 
@@ -107,7 +69,7 @@ func TestReserve_ConcurrentGuestsNeverOverbook(t *testing.T) {
 }
 
 func TestCancelReservation_ReleasesUnits(t *testing.T) {
-	pool := newTestPool(t)
+	pool := dbtest.NewPool(t)
 	repo := NewRepository(pool)
 	ctx := context.Background()
 	giftID := createTestGift(t, pool, 2)
@@ -137,7 +99,7 @@ func TestCancelReservation_ReleasesUnits(t *testing.T) {
 }
 
 func TestReserve_UnknownGift(t *testing.T) {
-	pool := newTestPool(t)
+	pool := dbtest.NewPool(t)
 	repo := NewRepository(pool)
 
 	_, _, err := repo.Reserve(context.Background(), domain.NewReservation{GiftID: "no-existe", Quantity: 1})

@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/yosan-aly/regalos-lian-api/internal/gifts/domain"
+	"github.com/yosan-aly/regalos-lian-api/internal/platform/httperr"
 )
 
 // GiftService es lo que el adaptador HTTP necesita de la capa de aplicación.
@@ -31,7 +32,7 @@ func NewHandler(svc GiftService) *Handler {
 // @Tags Catalog
 // @Produce application/json
 // @Success 200 {object} CatalogResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 500 {object} httperr.ErrorResponse
 // @Router /catalog [get]
 func (h *Handler) Catalog(c *fiber.Ctx) error {
 	categories, err := h.svc.Catalog(c.UserContext())
@@ -53,17 +54,17 @@ func (h *Handler) Catalog(c *fiber.Ctx) error {
 // @Param giftId path string true "Id del regalo" default(bodies-3-6)
 // @Param Reservation body ReserveRequest false "Cantidad a reservar (1 a 20)"
 // @Success 201 {object} ReservationResponse
-// @Failure 400 {object} ErrorResponse "INVALID_QUANTITY o INVALID_BODY"
-// @Failure 404 {object} ErrorResponse "GIFT_NOT_FOUND"
-// @Failure 409 {object} ErrorResponse "NOT_ENOUGH_AVAILABLE: otro invitado se adelantó"
-// @Failure 429 {object} ErrorResponse "TOO_MANY_REQUESTS"
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} httperr.ErrorResponse "INVALID_QUANTITY o INVALID_BODY"
+// @Failure 404 {object} httperr.ErrorResponse "GIFT_NOT_FOUND"
+// @Failure 409 {object} httperr.ErrorResponse "NOT_ENOUGH_AVAILABLE: otro invitado se adelantó"
+// @Failure 429 {object} httperr.ErrorResponse "TOO_MANY_REQUESTS"
+// @Failure 500 {object} httperr.ErrorResponse
 // @Router /gifts/{giftId}/reservations [post]
 func (h *Handler) Reserve(c *fiber.Ctx) error {
 	var req ReserveRequest
 	if len(c.Body()) > 0 {
 		if err := c.BodyParser(&req); err != nil {
-			return WriteError(c, fiber.StatusBadRequest, "INVALID_BODY", "El cuerpo de la solicitud no es válido.")
+			return httperr.Write(c, fiber.StatusBadRequest, "INVALID_BODY", "El cuerpo de la solicitud no es válido.")
 		}
 	}
 	if req.Quantity == 0 {
@@ -90,8 +91,8 @@ func (h *Handler) Reserve(c *fiber.Ctx) error {
 // @Security AdminToken
 // @Param includeCancelled query bool false "Incluir reservas canceladas"
 // @Success 200 {object} AdminReservationsResponse
-// @Failure 401 {object} ErrorResponse "UNAUTHORIZED"
-// @Failure 500 {object} ErrorResponse
+// @Failure 401 {object} httperr.ErrorResponse "UNAUTHORIZED"
+// @Failure 500 {object} httperr.ErrorResponse
 // @Router /admin/reservations [get]
 func (h *Handler) Reservations(c *fiber.Ctx) error {
 	list, err := h.svc.Reservations(c.UserContext(), c.QueryBool("includeCancelled"))
@@ -114,9 +115,9 @@ func (h *Handler) Reservations(c *fiber.Ctx) error {
 // @Security AdminToken
 // @Param id path string true "Id de la reserva (UUID)"
 // @Success 204 "Reserva cancelada"
-// @Failure 401 {object} ErrorResponse "UNAUTHORIZED"
-// @Failure 404 {object} ErrorResponse "RESERVATION_NOT_FOUND"
-// @Failure 500 {object} ErrorResponse
+// @Failure 401 {object} httperr.ErrorResponse "UNAUTHORIZED"
+// @Failure 404 {object} httperr.ErrorResponse "RESERVATION_NOT_FOUND"
+// @Failure 500 {object} httperr.ErrorResponse
 // @Router /admin/reservations/{id} [delete]
 func (h *Handler) CancelReservation(c *fiber.Ctx) error {
 	if err := h.svc.CancelReservation(c.UserContext(), c.Params("id")); err != nil {
@@ -132,7 +133,7 @@ func (h *Handler) fail(c *fiber.Ctx, err error) error {
 	if !errors.As(err, &de) {
 		return err
 	}
-	return WriteError(c, statusFor(de), de.Code, de.Message)
+	return httperr.Write(c, statusFor(de), de.Code, de.Message)
 }
 
 func statusFor(err *domain.Error) int {
@@ -144,9 +145,4 @@ func statusFor(err *domain.Error) int {
 	default:
 		return fiber.StatusBadRequest
 	}
-}
-
-// WriteError responde con el formato de error común de la API.
-func WriteError(c *fiber.Ctx, status int, code, message string) error {
-	return c.Status(status).JSON(ErrorResponse{Error: ErrorBody{Code: code, Message: message}})
 }

@@ -14,14 +14,22 @@ import (
 	"github.com/gofiber/swagger"
 
 	_ "github.com/yosan-aly/regalos-lian-api/api/rest" // registra la especificación OpenAPI
-	"github.com/yosan-aly/regalos-lian-api/internal/gifts/infrastructure/rest"
+	attendancerest "github.com/yosan-aly/regalos-lian-api/internal/attendance/infrastructure/rest"
+	giftsrest "github.com/yosan-aly/regalos-lian-api/internal/gifts/infrastructure/rest"
 	"github.com/yosan-aly/regalos-lian-api/internal/platform/config"
+	"github.com/yosan-aly/regalos-lian-api/internal/platform/httperr"
 )
 
 const adminTokenHeader = "X-Admin-Token"
 
+// Services agrupa los casos de uso que expone la API.
+type Services struct {
+	Gifts      giftsrest.GiftService
+	Attendance attendancerest.AttendanceService
+}
+
 // New arma la aplicación HTTP con sus middlewares y rutas.
-func New(cfg config.Config, svc rest.GiftService, log *slog.Logger) *fiber.App {
+func New(cfg config.Config, svc Services, log *slog.Logger) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName:               cfg.AppName,
 		DisableStartupMessage: true,
@@ -42,7 +50,7 @@ func New(cfg config.Config, svc rest.GiftService, log *slog.Logger) *fiber.App {
 		requestLogger(log),
 		cors.New(cors.Config{
 			AllowOrigins: cfg.AllowedOrigins,
-			AllowMethods: "GET,POST,DELETE",
+			AllowMethods: "GET,POST,PUT,DELETE",
 			AllowHeaders: "Content-Type," + adminTokenHeader,
 		}),
 	)
@@ -57,25 +65,33 @@ func New(cfg config.Config, svc rest.GiftService, log *slog.Logger) *fiber.App {
 		log.Info("swagger enabled", "url", "http://localhost:"+cfg.Port+"/swagger/index.html")
 	}
 
-	h := rest.NewHandler(svc)
+	gifts := giftsrest.NewHandler(svc.Gifts)
+	attendance := attendancerest.NewHandler(svc.Attendance)
+	// Un solo límite para las escrituras públicas: el contador por IP se comparte.
+	writeLimit := writeLimiter(cfg.ReserveRateLimit)
+
 	api := app.Group("/api/v1")
-	api.Get("/catalog", h.Catalog)
-	api.Post("/gifts/:giftId/reservations", reserveLimiter(cfg.ReserveRateLimit), h.Reserve)
+	api.Get("/catalog", gifts.Catalog)
+	api.Post("/gifts/:giftId/reservations", writeLimit, gifts.Reserve)
+	api.Post("/attendance-confirmations", writeLimit, attendance.Confirm)
+	api.Put("/attendance-confirmations/:id", writeLimit, attendance.Update)
 
 	admin := api.Group("/admin", adminAuth(cfg.AdminToken))
-	admin.Get("/reservations", h.Reservations)
-	admin.Delete("/reservations/:id", h.CancelReservation)
+	admin.Get("/reservations", gifts.Reservations)
+	admin.Delete("/reservations/:id", gifts.CancelReservation)
+	admin.Get("/attendance-confirmations", attendance.Summary)
+	admin.Delete("/attendance-confirmations/:id", attendance.Delete)
 
 	return app
 }
 
-// reserveLimiter evita que un script llene la lista de reservas falsas.
-func reserveLimiter(perMinute int) fiber.Handler {
+// writeLimiter evita que un script llene la lista de reservas o confirmaciones falsas.
+func writeLimiter(perMinute int) fiber.Handler {
 	return limiter.New(limiter.Config{
 		Max:        perMinute,
 		Expiration: time.Minute,
 		LimitReached: func(c *fiber.Ctx) error {
-			return rest.WriteError(c, fiber.StatusTooManyRequests, "TOO_MANY_REQUESTS",
+			return httperr.Write(c, fiber.StatusTooManyRequests, "TOO_MANY_REQUESTS",
 				"Demasiados intentos. Espera un minuto e inténtalo de nuevo.")
 		},
 	})
@@ -89,7 +105,7 @@ func adminAuth(token string) fiber.Handler {
 		}
 		got := c.Get(adminTokenHeader)
 		if subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
-			return rest.WriteError(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "Token de administración inválido.")
+			return httperr.Write(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "Token de administración inválido.")
 		}
 		return c.Next()
 	}
@@ -129,7 +145,7 @@ func errorHandler(log *slog.Logger) fiber.ErrorHandler {
 	return func(c *fiber.Ctx, err error) error {
 		var fe *fiber.Error
 		if errors.As(err, &fe) {
-			return rest.WriteError(c, fe.Code, "HTTP_ERROR", fe.Message)
+			return httperr.Write(c, fe.Code, "HTTP_ERROR", fe.Message)
 		}
 		log.Error("unhandled error",
 			"error", err.Error(),
@@ -137,7 +153,7 @@ func errorHandler(log *slog.Logger) fiber.ErrorHandler {
 			"path", c.Path(),
 			"requestId", c.Locals(requestid.ConfigDefault.ContextKey),
 		)
-		return rest.WriteError(c, fiber.StatusInternalServerError, "INTERNAL_ERROR",
+		return httperr.Write(c, fiber.StatusInternalServerError, "INTERNAL_ERROR",
 			"Ocurrió un error inesperado. Inténtalo de nuevo en un momento.")
 	}
 }
