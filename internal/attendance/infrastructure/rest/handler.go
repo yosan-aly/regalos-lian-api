@@ -33,7 +33,7 @@ func NewHandler(svc AttendanceService) *Handler {
 // @Tags Attendance
 // @Accept application/json
 // @Produce application/json
-// @Param Confirmation body ConfirmationRequest true "Nombre y total de asistentes (1 a 10)"
+// @Param Confirmation body ConfirmationRequest true "Nombre y total de asistentes (1 a 7)"
 // @Success 201 {object} ConfirmationResponse
 // @Failure 400 {object} httperr.ErrorResponse "INVALID_NAME, INVALID_ATTENDEES o INVALID_BODY"
 // @Failure 429 {object} httperr.ErrorResponse "TOO_MANY_REQUESTS"
@@ -58,7 +58,7 @@ func (h *Handler) Confirm(c *fiber.Ctx) error {
 // @Accept application/json
 // @Produce application/json
 // @Param id path string true "Id de la confirmación (UUID)"
-// @Param Confirmation body ConfirmationRequest true "Nombre y total de asistentes (1 a 10)"
+// @Param Confirmation body ConfirmationRequest true "Nombre y total de asistentes (1 a 7)"
 // @Success 200 {object} ConfirmationResponse
 // @Failure 400 {object} httperr.ErrorResponse "INVALID_NAME, INVALID_ATTENDEES o INVALID_BODY"
 // @Failure 404 {object} httperr.ErrorResponse "CONFIRMATION_NOT_FOUND"

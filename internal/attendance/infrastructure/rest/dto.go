@@ -9,7 +9,7 @@ import (
 // ConfirmationRequest es el formulario de confirmación de asistencia.
 type ConfirmationRequest struct {
 	Name      string `json:"name" example:"Sanly Ortiz"`
-	Attendees int    `json:"attendees" example:"3" minimum:"1" maximum:"4"`
+	Attendees int    `json:"attendees" example:"3" minimum:"1" maximum:"7"`
 }
 
 type ConfirmationResponse struct {

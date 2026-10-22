@@ -210,7 +210,7 @@ const docTemplate = `{
                 "summary": "Confirmar asistencia",
                 "parameters": [
                     {
-                        "description": "Nombre y total de asistentes (1 a 10)",
+                        "description": "Nombre y total de asistentes (1 a 7)",
                         "name": "Confirmation",
                         "in": "body",
                         "required": true,
@@ -269,7 +269,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Nombre y total de asistentes (1 a 10)",
+                        "description": "Nombre y total de asistentes (1 a 7)",
                         "name": "Confirmation",
                         "in": "body",
                         "required": true,
@@ -493,7 +493,7 @@ const docTemplate = `{
             "properties": {
                 "attendees": {
                     "type": "integer",
-                    "maximum": 4,
+                    "maximum": 7,
                     "minimum": 1,
                     "example": 3
                 },

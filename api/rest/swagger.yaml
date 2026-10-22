@@ -58,7 +58,7 @@ definitions:
     properties:
       attendees:
         example: 3
-        maximum: 4
+        maximum: 7
         minimum: 1
         type: integer
       name:
@@ -288,7 +288,7 @@ paths:
         Registra que un invitado asistirá y cuántas personas van en total (incluyéndolo).
         Guarda el id de la respuesta: es el que permite actualizar la confirmación.
       parameters:
-      - description: Nombre y total de asistentes (1 a 10)
+      - description: Nombre y total de asistentes (1 a 7)
         in: body
         name: Confirmation
         required: true
@@ -328,7 +328,7 @@ paths:
         name: id
         required: true
         type: string
-      - description: Nombre y total de asistentes (1 a 10)
+      - description: Nombre y total de asistentes (1 a 7)
         in: body
         name: Confirmation
         required: true

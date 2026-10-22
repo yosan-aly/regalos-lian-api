@@ -37,7 +37,7 @@ type Summary struct {
 
 // ParseConfirmationInput valida y normaliza el formulario del invitado.
 func ParseConfirmationInput(name string, attendees int) (ConfirmationInput, error) {
-	// Colapsa espacios repetidos: "  Ana   María " -> "Sanly Ortiz"
+	// Colapsa espacios repetidos: "  Sanly   Ortiz " -> "Sanly Ortiz"
 	name = strings.Join(strings.Fields(name), " ")
 	if n := utf8.RuneCountInString(name); n < MinNameLength || n > MaxNameLength {
 		return ConfirmationInput{}, ErrInvalidName

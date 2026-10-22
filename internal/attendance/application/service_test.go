@@ -37,7 +37,7 @@ func TestConfirm_NormalizesAndValidates(t *testing.T) {
 	repo := &fakeRepo{}
 	svc := NewService(repo)
 
-	got, err := svc.Confirm(context.Background(), "  Ana   María ", 3)
+	got, err := svc.Confirm(context.Background(), "  Sanly   Ortiz ", 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
