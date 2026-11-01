@@ -68,15 +68,19 @@ func New(cfg config.Config, svc Services, log *slog.Logger) *fiber.App {
 	gifts := giftsrest.NewHandler(svc.Gifts)
 	attendance := attendancerest.NewHandler(svc.Attendance)
 	// Un solo límite para las escrituras públicas: el contador por IP se comparte.
-	writeLimit := writeLimiter(cfg.ReserveRateLimit)
+	writeLimit := rateLimiter(cfg.ReserveRateLimit, false)
+	// Intentos fallidos con un token (admin o código de consulta), contador compartido.
+	failedAttempts := rateLimiter(cfg.AdminRateLimit, true)
 
 	api := app.Group("/api/v1")
 	api.Get("/catalog", gifts.Catalog)
 	api.Post("/gifts/:giftId/reservations", writeLimit, gifts.Reserve)
 	api.Post("/attendance-confirmations", writeLimit, attendance.Confirm)
 	api.Put("/attendance-confirmations/:id", writeLimit, attendance.Update)
+	// Solo lectura: acepta el código de consulta sencillo o el token de admin.
+	api.Get("/attendance-confirmations/summary", failedAttempts, tokenAuth(cfg.ViewerToken, cfg.AdminToken), attendance.Summary)
 
-	admin := api.Group("/admin", adminAuth(cfg.AdminToken))
+	admin := api.Group("/admin", failedAttempts, tokenAuth(cfg.AdminToken))
 	admin.Get("/reservations", gifts.Reservations)
 	admin.Delete("/reservations/:id", gifts.CancelReservation)
 	admin.Get("/attendance-confirmations", attendance.Summary)
@@ -86,10 +90,14 @@ func New(cfg config.Config, svc Services, log *slog.Logger) *fiber.App {
 }
 
 // writeLimiter evita que un script llene la lista de reservas o confirmaciones falsas.
-func writeLimiter(perMinute int) fiber.Handler {
+// rateLimiter limita las peticiones por minuto por IP. Con onlyFailures solo
+// cuenta las respuestas con error (por ejemplo, un código incorrecto), así quien
+// tiene el código correcto nunca queda bloqueado.
+func rateLimiter(perMinute int, onlyFailures bool) fiber.Handler {
 	return limiter.New(limiter.Config{
-		Max:        perMinute,
-		Expiration: time.Minute,
+		Max:                    perMinute,
+		Expiration:             time.Minute,
+		SkipSuccessfulRequests: onlyFailures,
 		LimitReached: func(c *fiber.Ctx) error {
 			return httperr.Write(c, fiber.StatusTooManyRequests, "TOO_MANY_REQUESTS",
 				"Demasiados intentos. Espera un minuto e inténtalo de nuevo.")
@@ -97,17 +105,26 @@ func writeLimiter(perMinute int) fiber.Handler {
 	})
 }
 
-func adminAuth(token string) fiber.Handler {
+// tokenAuth deja pasar si el header coincide con alguno de los tokens
+// configurados. Los tokens vacíos se ignoran; si todos lo están, la ruta no existe.
+func tokenAuth(tokens ...string) fiber.Handler {
+	var valid [][]byte
+	for _, t := range tokens {
+		if t != "" {
+			valid = append(valid, []byte(t))
+		}
+	}
 	return func(c *fiber.Ctx) error {
-		if token == "" {
-			// Sin token configurado, las rutas de admin no existen.
+		if len(valid) == 0 {
 			return fiber.ErrNotFound
 		}
-		got := c.Get(adminTokenHeader)
-		if subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
-			return httperr.Write(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "Token de administración inválido.")
+		got := []byte(c.Get(adminTokenHeader))
+		for _, t := range valid {
+			if subtle.ConstantTimeCompare(got, t) == 1 {
+				return c.Next()
+			}
 		}
-		return c.Next()
+		return httperr.Write(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "El código de acceso no es correcto.")
 	}
 }
 

@@ -22,7 +22,7 @@ const docTemplate = `{
                         "AdminToken": []
                     }
                 ],
-                "description": "Confirmaciones de asistencia (de la más reciente a la más antigua) con el total de asistentes.",
+                "description": "Confirmaciones de asistencia (de la más reciente a la más antigua) con el total de asistentes.\nEn /attendance-confirmations/summary también acepta el código de consulta (VIEWER_TOKEN), que es de solo lectura.",
                 "produces": [
                     "application/json"
                 ],
@@ -234,6 +234,43 @@ const docTemplate = `{
                     },
                     "429": {
                         "description": "TOO_MANY_REQUESTS",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance-confirmations/summary": {
+            "get": {
+                "security": [
+                    {
+                        "AdminToken": []
+                    }
+                ],
+                "description": "Confirmaciones de asistencia (de la más reciente a la más antigua) con el total de asistentes.\nEn /attendance-confirmations/summary también acepta el código de consulta (VIEWER_TOKEN), que es de solo lectura.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Listar confirmaciones",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConfirmationSummaryResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "UNAUTHORIZED",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }

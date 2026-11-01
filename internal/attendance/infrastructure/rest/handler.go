@@ -80,6 +80,7 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 // Summary
 // @Summary Listar confirmaciones
 // @Description Confirmaciones de asistencia (de la más reciente a la más antigua) con el total de asistentes.
+// @Description En /attendance-confirmations/summary también acepta el código de consulta (VIEWER_TOKEN), que es de solo lectura.
 // @Tags Admin
 // @Produce application/json
 // @Security AdminToken
@@ -87,6 +88,7 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 // @Failure 401 {object} httperr.ErrorResponse "UNAUTHORIZED"
 // @Failure 500 {object} httperr.ErrorResponse
 // @Router /admin/attendance-confirmations [get]
+// @Router /attendance-confirmations/summary [get]
 func (h *Handler) Summary(c *fiber.Ctx) error {
 	summary, err := h.svc.Summary(c.UserContext())
 	if err != nil {

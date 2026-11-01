@@ -19,6 +19,12 @@ type Config struct {
 	AllowedOrigins string
 	// AdminToken protege /api/v1/admin. Si está vacío, esas rutas se desactivan.
 	AdminToken string
+	// ViewerToken es un código sencillo de solo consulta: permite ver el resumen
+	// de confirmaciones de asistencia, pero no modificar nada. Vacío = desactivado.
+	ViewerToken string
+	// AdminRateLimit es el máximo de intentos fallidos con un token por minuto
+	// por IP; frena a quien intente adivinar el código de consulta.
+	AdminRateLimit int
 	// ReserveRateLimit es el máximo de escrituras públicas (reservas y
 	// confirmaciones de asistencia) por minuto por IP.
 	ReserveRateLimit int
@@ -79,6 +85,7 @@ func Load() (Config, error) {
 		},
 		AllowedOrigins: required("ALLOWED_ORIGINS"),
 		AdminToken:     os.Getenv("ADMIN_TOKEN"),
+		ViewerToken:    os.Getenv("VIEWER_TOKEN"),
 	}
 	if len(missing) > 0 {
 		return Config{}, fmt.Errorf("faltan variables de entorno: %s", strings.Join(missing, ", "))
@@ -88,11 +95,13 @@ func Load() (Config, error) {
 		return Config{}, errors.New("DB_SCHEMAS debe ser un solo schema en minúsculas (letras, números y _)")
 	}
 
-	limit, err := strconv.Atoi(getEnv("RESERVE_RATE_LIMIT", "10"))
-	if err != nil || limit < 1 {
-		return Config{}, errors.New("RESERVE_RATE_LIMIT debe ser un entero mayor que 0")
+	var err error
+	if cfg.ReserveRateLimit, err = positiveInt("RESERVE_RATE_LIMIT", "10"); err != nil {
+		return Config{}, err
 	}
-	cfg.ReserveRateLimit = limit
+	if cfg.AdminRateLimit, err = positiveInt("ADMIN_RATE_LIMIT", "10"); err != nil {
+		return Config{}, err
+	}
 
 	if cfg.WithOpenAPI, err = strconv.ParseBool(getEnv("SERVICE_WITH_OPEN_API", "false")); err != nil {
 		return Config{}, errors.New("SERVICE_WITH_OPEN_API debe ser true o false")
@@ -103,6 +112,14 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func positiveInt(key, fallback string) (int, error) {
+	n, err := strconv.Atoi(getEnv(key, fallback))
+	if err != nil || n < 1 {
+		return 0, fmt.Errorf("%s debe ser un entero mayor que 0", key)
+	}
+	return n, nil
 }
 
 func getEnv(key, fallback string) string {

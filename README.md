@@ -77,6 +77,7 @@ Base: `/api/v1`. Los errores siempre tienen la forma
 | DELETE | `/api/v1/admin/reservations/{id}` | admin | Cancela la reserva y libera las unidades |
 | POST | `/api/v1/attendance-confirmations` | público | Confirma asistencia. Body: `{"name": "Ana", "attendees": 3}`; devuelve el `id` |
 | PUT | `/api/v1/attendance-confirmations/{id}` | público, con el `id` | Actualiza nombre o asistentes |
+| GET | `/api/v1/attendance-confirmations/summary` | código de consulta o admin | El mismo resumen, de solo lectura, para la vista oculta de la página |
 | GET | `/api/v1/admin/attendance-confirmations` | admin | Confirmaciones con `totalConfirmations` y `totalAttendees` |
 | DELETE | `/api/v1/admin/attendance-confirmations/{id}` | admin | Elimina una confirmación (por ejemplo, un duplicado) |
 
@@ -142,6 +143,8 @@ instancias migren a la vez.
 | `DB_USER` / `DB_PASSWORD` | sí | Credenciales |
 | `DB_SSL_MODE` | no | `verify-full` en producción (Neon) |
 | `ALLOWED_ORIGINS` | sí | Orígenes CORS separados por comas |
+| `VIEWER_TOKEN` | no | Código sencillo de solo consulta para ver las confirmaciones de asistencia |
+| `ADMIN_RATE_LIMIT` | no | Intentos fallidos con un token por minuto por IP (por defecto 10) |
 | `ADMIN_TOKEN` | no | Token de las rutas de admin |
 | `RESERVE_RATE_LIMIT` | no | Escrituras públicas (reservas y confirmaciones) por minuto por IP (por defecto 10) |
 | `SERVICE_PORT` / `PORT` | no | Puerto HTTP (por defecto 8080) |

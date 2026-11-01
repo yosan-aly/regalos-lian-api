@@ -168,8 +168,9 @@ info:
 paths:
   /admin/attendance-confirmations:
     get:
-      description: Confirmaciones de asistencia (de la más reciente a la más antigua)
-        con el total de asistentes.
+      description: |-
+        Confirmaciones de asistencia (de la más reciente a la más antigua) con el total de asistentes.
+        En /attendance-confirmations/summary también acepta el código de consulta (VIEWER_TOKEN), que es de solo lectura.
       produces:
       - application/json
       responses:
@@ -360,6 +361,31 @@ paths:
       summary: Actualizar una confirmación
       tags:
       - Attendance
+  /attendance-confirmations/summary:
+    get:
+      description: |-
+        Confirmaciones de asistencia (de la más reciente a la más antigua) con el total de asistentes.
+        En /attendance-confirmations/summary también acepta el código de consulta (VIEWER_TOKEN), que es de solo lectura.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ConfirmationSummaryResponse'
+        "401":
+          description: UNAUTHORIZED
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - AdminToken: []
+      summary: Listar confirmaciones
+      tags:
+      - Admin
   /catalog:
     get:
       description: Devuelve las categorías con sus regalos y la disponibilidad actual
